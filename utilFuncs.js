@@ -41,6 +41,8 @@ async function generateNewPlaylist(){
         console.log("error. ",error)
       })
       tmp = hi;
+      console.clear()
+      console.log("progress: "+Math.round(hi*100/(seedArtists.length/3),2)+"%")
       hi += 2;
       lo = tmp;
     }
@@ -104,7 +106,6 @@ async function generateNewPlaylist(){
     items.sort(
       (first, second) => { return second[1] - first[1] }
     );
-    console.log(items)
     var keys = items.map(
       (e) => { return e[0] });
     
@@ -120,7 +121,6 @@ async function generateNewPlaylist(){
     tracklist.forEach(track=>{
       convertedList.push(track)
     })
-    console.log(convertedList)
   
     var finaltrackList = []
     let i = 0
@@ -157,7 +157,6 @@ async function emptyPlaylist(playlistID,limit,offset){
     do{
       var tracks  = await spotifyApi.getPlaylistTracks(playlistID,{limit:limit,offset:offset})
       .then((success)=>{
-        console.log(success.body.items)
         return success.body.items
       },error=>{
         console.log(error)
@@ -193,6 +192,7 @@ async function emptyPlaylist(playlistID,limit,offset){
     },error=>{
       console.log("error: ",error)
     })
+    return
   }
 
 module.exports = {emptyPlaylist,eliminateOldTracks,getSeedValues,sort_object,addToSavedTracks,generateNewPlaylist}
