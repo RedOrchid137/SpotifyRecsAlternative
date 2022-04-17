@@ -6,7 +6,7 @@ Simple NodeJS backend that allows you to generate a playlist of new tracks that 
 For this to work we'll need to do some preparation first. If, however, you are already satisfied with the quantity of tracks in your liked playlist this may not be necessary. 
 The API can only perform checks on your saved or 'liked' tracks, so if we want the playlist to be mostly unique we'll need to adapt to that. 
 
-First off, set up an application via the Spotify Developer Dashboard. You'll need the client id and secret to use later on.
+First off, set up an application via the Spotify Developer Dashboard. You'll need the client id and secret to use later on. Also set a redirect uri like so: your_domain/returncode
 
 ## Authorization
 
