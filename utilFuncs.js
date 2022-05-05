@@ -1,7 +1,10 @@
 const dotenv = require('dotenv');
 dotenv.config();
 
-var api = require("./app")
+//Spotify API only allows for a limited number of tracks to be manipulated in a single call
+const TRACK_LIMIT_ADD = 50
+const TRACK_LIMIT_REMOVE = 100
+
 
 var SpotifyWebApi = require('spotify-web-api-node');
 var spotifyApi = new SpotifyWebApi({
@@ -10,7 +13,13 @@ var spotifyApi = new SpotifyWebApi({
   redirectUri: process.env.REDIRECT_URI
 });
 
+function setTokens(){
+  spotifyApi.setAccessToken(process.env.ACCESS_TOKEN)
+  spotifyApi.setRefreshToken(process.env.REFRESH_TOKEN)
+}
+
 async function generateNewPlaylist(){
+    setTokens()
     console.log("generating")
     var seed = await getSeedValues();
     console.log("seeding done")
@@ -20,9 +29,6 @@ async function generateNewPlaylist(){
     var lo = 0
     var hi = 2
     var tmp
-
-    spotifyApi.setAccessToken(process.env.ACCESS_TOKEN)
-    spotifyApi.setRefreshToken(process.env.REFRESH_TOKEN)
     do{
       await spotifyApi.getRecommendations({
         seed_artists:seedArtists.slice(lo,hi),
@@ -53,8 +59,7 @@ async function generateNewPlaylist(){
   
   
   async function addToSavedTracks(trackList){
-    spotifyApi.setAccessToken(process.env.ACCESS_TOKEN)
-    spotifyApi.setRefreshToken(process.env.REFRESH_TOKEN)
+    setTokens()
     await spotifyApi.addToMySavedTracks(trackList)
     .then(function(data) {
       console.log('Added track!');
@@ -64,14 +69,13 @@ async function generateNewPlaylist(){
   }
   
   async function getSeedValues(){
-    spotifyApi.setAccessToken(process.env.ACCESS_TOKEN)
-    spotifyApi.setRefreshToken(process.env.REFRESH_TOKEN)
+    setTokens()
     console.log("seeding")
     var seedArtists = []
     var seedTracks = []
     var seedGenres = []
     var checkedAlbums = []
-    var limit = 50;
+    var limit = TRACK_LIMIT_ADD;
     var offset = 0;
     do{
       var tracks  = await spotifyApi.getMySavedTracks({limit:limit,offset:offset})
@@ -112,9 +116,7 @@ async function generateNewPlaylist(){
   } 
   
   async function eliminateOldTracks(tracklist){
-    spotifyApi.setAccessToken(process.env.ACCESS_TOKEN)
-    spotifyApi.setRefreshToken(process.env.REFRESH_TOKEN)
-
+    setTokens()
     console.log("eliminating")
     var convertedList = []
     tracklist.forEach(track=>{
@@ -150,8 +152,7 @@ async function generateNewPlaylist(){
   }
   
 async function emptyPlaylist(playlistID,limit,offset){
-    spotifyApi.setAccessToken(process.env.ACCESS_TOKEN)
-    spotifyApi.setRefreshToken(process.env.REFRESH_TOKEN)
+  setTokens()
     console.log("emptying")
     var playListTracks = []
     do{
@@ -172,27 +173,66 @@ async function emptyPlaylist(playlistID,limit,offset){
     }
     while(tracks.length>0);
   
-    if(playListTracks.length>100){
-      var repeats = playListTracks.length/100-1
-      var last = playListTracks%100
+    if(playListTracks.length>TRACK_LIMIT_REMOVE){
+      var repeats = playListTracks.length/TRACK_LIMIT_REMOVE-1
+      var last = playListTracks%TRACK_LIMIT_REMOVE
       for (let index = 0; index < repeats; index++) {
-        spotifyApi.removeTracksFromPlaylist(playlistID,playListTracks.splice(index*100,index*100+100)).then(success=>{
+        spotifyApi.removeTracksFromPlaylist(playlistID,playListTracks.splice(index*TRACK_LIMIT_REMOVE,index*TRACK_LIMIT_REMOVE+TRACK_LIMIT_REMOVE)).then(success=>{
         },error=>{
           console.log("error: ",error)
         })
       }
-      spotifyApi.removeTracksFromPlaylist(playlistID,playListTracks.splice(repeats*100,repeats*100+last)).then(success=>{
+      spotifyApi.removeTracksFromPlaylist(playlistID,playListTracks.splice(repeats*TRACK_LIMIT_REMOVE,repeats*TRACK_LIMIT_REMOVE+last)).then(success=>{
         console.log("playlist successfully cleared")
+        return true;
       },error=>{
         console.log("error: ",error)
       })
-      return
+
     }
     spotifyApi.removeTracksFromPlaylist(playlistID,playListTracks).then(success=>{
       console.log("playlist successfully cleared")
+      return true;
     },error=>{
       console.log("error: ",error)
     })
+    return false;
   }
 
-module.exports = {emptyPlaylist,eliminateOldTracks,getSeedValues,sort_object,addToSavedTracks,generateNewPlaylist}
+  async function initPlaylists(){
+    setTokens()
+    var uPlaylists = await spotifyApi.getUserPlaylists().then(success=>{
+      return success.body;
+    },error=>{
+      console.log(error)
+    })
+  
+    uPlaylists.items.forEach(async playlist => 
+      {
+        var curPL = await spotifyApi.getPlaylistTracks(playlist.id).then(function(data) {
+          return data.body;
+        }, function(err) {
+          console.log('Something went wrong!', err);
+        });
+  
+        var trackList = []
+        await curPL.items.forEach(track=>{
+          trackList.push(track.track.id)
+        })
+  
+        if(trackList.length>TRACK_LIMIT_ADD){
+          var repeats = trackList.length/TRACK_LIMIT_ADD-1
+          var last = trackList.length%TRACK_LIMIT_ADD
+          for (let i = 0; i < repeats; i++) {
+            await addToSavedTracks(trackList.slice(i*TRACK_LIMIT_ADD,i*TRACK_LIMIT_ADD+TRACK_LIMIT_ADD))
+          }
+          if(last!=0){
+            await addToSavedTracks(trackList.slice(repeats*TRACK_LIMIT_ADD,repeats*TRACK_LIMIT_ADD+last))
+          }
+        }
+        else{
+          await addToSavedTracks(trackList)
+        }
+  });
+  }
+module.exports = {emptyPlaylist,eliminateOldTracks,getSeedValues,sort_object,addToSavedTracks,generateNewPlaylist,initPlaylists}

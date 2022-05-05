@@ -29,10 +29,12 @@ CLIENT_SECRET= ____
 
 REDIRECT_URI = your_domain/returncode
 
+(Can be found in playlist url. https://open.spotify.com/playlist/your_playlist_id?si=other_stuff)
 DISCOVER_ID = your_playlist_id
 
 STATE = random_value
 
+(eg. 3000)
 PORT = ____
 
 ```
@@ -45,6 +47,8 @@ To add all tracks in your current playlists to your liked ones, for use in check
 *your_domain/generatePlaylist* | **GET**
 
 Fill your provided playlist based on a randomly chosen portion of tracks and artists in your library, guaranteed not to contain any duplicate tracks from your liked playlist. This is sort of like the Discover Weekly feature Spotify offers, except you can use it as often as you want instead of having to wait a week for a measly 30 tracks.
+
+Might take a couple minutes to fully complete depending on the length of your saved tracks playlist.
 
 *your_domain/emptyPlaylist* | **GET**
 

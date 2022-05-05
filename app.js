@@ -59,40 +59,8 @@ app.use((req,res,next)=>{
   }
 })
 app.get("/prepPlaylists",async (req,res)=>{
-  
-  var uPlaylists = await spotifyApi.getUserPlaylists().then(success=>{
-    return success.body;
-  },error=>{
-    console.log(error)
-  })
-
-  uPlaylists.items.forEach(async playlist => 
-    {
-      var curPL = await spotifyApi.getPlaylistTracks(playlist.id).then(function(data) {
-        return data.body;
-      }, function(err) {
-        console.log('Something went wrong!', err);
-      });
-
-      var trackList = []
-      await curPL.items.forEach(track=>{
-        trackList.push(track.track.id)
-      })
-
-      if(trackList.length>50){
-        var repeats = trackList.length/50-1
-        var last = trackList.length%50
-        for (let i = 0; i < repeats; i++) {
-          await util.addToSavedTracks(trackList.slice(i*50,i*50+50))
-        }
-        if(last!=0){
-          await util.addToSavedTracks(trackList.slice(repeats*50,repeats*50+last))
-        }
-      }
-      else{
-        await util.addToSavedTracks(trackList)
-      }
-});
+ await util.initPlaylists();
+ res.send("prepped user playlists")
 })
 
 app.get("/generatePlaylist",async (req,res)=>{
@@ -107,7 +75,14 @@ app.get("/generatePlaylist",async (req,res)=>{
 })
 
 app.get("/emptyPlaylist",async(req,res)=>{
-  await util.emptyPlaylist(process.env.DISCOVER_ID,50,0)
+  var check  = await util.emptyPlaylist(process.env.DISCOVER_ID,50,0)
+  if(check){
+    res.send("Playlist successfully cleared").status(200)
+  }
+  else{
+    res.send().status(500)
+  }
+
 })
 
 app.listen(process.env.PORT,()=>{console.log(`app listening on port ${process.env.PORT}`)})
