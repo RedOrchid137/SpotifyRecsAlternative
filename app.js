@@ -72,6 +72,7 @@ app.get("/generatePlaylist",async (req,res)=>{
 
   await spotifyApi.addTracksToPlaylist(process.env.DISCOVER_ID,discoverAnytime)
   console.log("Done")
+  res.send("new tracks generated")
 })
 
 app.get("/emptyPlaylist",async(req,res)=>{
